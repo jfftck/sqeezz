@@ -13,7 +13,10 @@ class Inject(object):
                     return None
 
             def __setattr__(self, name, value):
-                self.__bindings[name] = value
+                if self.__profile() in self.__p_bindings():
+                    self.__p_bindings()[self.__profile()][name] = value
+                else:
+                    self.__bindings()[name] = value
 
         class __Injected(object):
             class Unset(object):
@@ -44,20 +47,24 @@ class Inject(object):
                 except KeyError:
                     return None
 
-        __all_bindings = {}
         __current_profile = None
+        __default_bindings = {}
         __default_providers = {}
         __injection_point = 'injected'
+        __profile_bindings = {}
         __profile_providers = {}
 
         def __call__(self, func):
             def __inject(*args, **kwargs):
                 if self.injection_point() not in kwargs:
                     providers = self.__providers()
-                    bindings = self.__bindings()
+                    bindings = self.__bindings().copy()
 
                     if self.__profile() in self.__p_providers():
                         providers.update(self.__p_providers()[self.__profile()])
+
+                    if self.__profile() in self.__p_bindings():
+                        bindings.update(self.__p_bindings()[self.__profile()])
 
                     kwargs[self.injection_point()] = self.__Injected(
                         self.__Providers(providers), self.__Bindings(bindings))
@@ -68,7 +75,11 @@ class Inject(object):
 
         @classmethod
         def __bindings(cls):
-            return cls.__all_bindings
+            return cls.__default_bindings
+
+        @classmethod
+        def __p_bindings(cls):
+            return cls.__profile_bindings
 
         @classmethod
         def __p_providers(cls):
@@ -84,7 +95,14 @@ class Inject(object):
 
         @classmethod
         def binding(cls, name, value):
-            cls.__all_bindings[name] = value
+            if cls.__current_profile is None or name not in cls.__profile_bindings:
+                cls.__default_bindings[name] = value
+
+            if cls.__current_profile is not None:
+                if cls.__current_profile not in cls.__profile_bindings:
+                    cls.__profile_bindings[cls.__current_profile] = {}
+
+                cls.__profile_bindings[cls.__current_profile][name] = value
 
         @classmethod
         def injection_point(cls, injection_point=None):
@@ -105,15 +123,15 @@ class Inject(object):
             return cls.__profile_providers.iterkeys()
 
         @classmethod
-        def register(cls, provider_name, provider):
-            if cls.__current_profile is None or provider_name not in cls.__default_providers:
-                cls.__default_providers[provider_name] = provider
+        def register(cls, name, provider):
+            if cls.__current_profile is None or name not in cls.__default_providers:
+                cls.__default_providers[name] = provider
 
             if cls.__current_profile is not None:
                 if cls.__current_profile not in cls.__profile_providers:
                     cls.__profile_providers[cls.__current_profile] = {}
 
-                cls.__profile_providers[cls.__current_profile][provider_name] = provider
+                cls.__profile_providers[cls.__current_profile][name] = provider
 
     @classmethod
     def __init__(cls):
