@@ -87,7 +87,18 @@ class Singleton(object):
         self.__create_instance()
         return self.__instance(*args, **kwargs)
 
+    def __getattr__(self, name):
+        self.__create_instance()
+        return getattr(self.__instance, name)
+
+    def __setattr__(self, name, value):
+        self.__create_instance()
+        setattr(self.__instance, name, value)
+
     def __create_instance(self):
         if self.__instance is None:
             with threading.RLock():
                 self.__instance = self.__cls()
+
+    def instance(self):
+        return self.__instance
