@@ -7,8 +7,10 @@ class Inject(object):
                 self.__providers = providers
 
             def __getattr__(self, item):
-                if item in self.__providers:
+                try:
                     return self.__providers[item]
+                except KeyError:
+                    return None
 
         __current_profile = None
         __default_providers = {}

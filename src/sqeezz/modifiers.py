@@ -65,12 +65,13 @@ class Data(object):
 
 
 class File(Data):
-    def __init__(self, path, *args, **kwargs):
+    def __init__(self, path, file_command=open, *args, **kwargs):
         self.__path = path
+        self.__file_command = file_command
         super(File, self).__init__(self.__open, *args, **kwargs)
 
     def __open(self, *args, **kwargs):
-        return open(self.__path, *args, **kwargs)
+        return self.__file_command(self.__path, *args, **kwargs)
 
     def open(self, *args, **kwargs):
         return self.__open(*args, **kwargs)
@@ -85,10 +86,6 @@ class Singleton(object):
     def __call__(self, *args, **kwargs):
         self.__create_instance()
         return self.__instance(*args, **kwargs)
-
-    def __getattr__(self, item):
-        self.__create_instance()
-        return getattr(self.__instance, item)
 
     def __create_instance(self):
         if self.__instance is None:
