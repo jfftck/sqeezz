@@ -12,6 +12,10 @@ class _Inject(object):
         __profile_providers = {}
 
         @classmethod
+        def current_profile(cls):
+            return cls.__current_profile
+
+        @classmethod
         def p_providers(cls):
             return cls.__profile_providers
 
@@ -68,8 +72,8 @@ def _inject(func, *args, **kwargs):
     spec = getargspec(func)
     args = list(args)
 
-    if inj.profile() in inj.p_providers():
-        providers.update(inj.p_providers()[inj.profile()])
+    if inj.current_profile() in inj.p_providers():
+        providers.update(inj.p_providers()[inj.current_profile()])
 
     while Injected in args:
         args.remove(Injected)
@@ -83,8 +87,20 @@ def _inject(func, *args, **kwargs):
     return func(*args, **kwargs)
 
 
+def current_profile():
+    return _Inject().current_profile()
+
+
 def inject(func):
     return decorate(func, _inject)
+
+
+def profile(name=None):
+    _Inject().profile(name)
+
+
+def profiles():
+    return _Inject().profiles()
 
 
 def register(**providers):
