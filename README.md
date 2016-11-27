@@ -7,8 +7,7 @@ The design for Sqeezz is to have simple and explict injection.
 
 * First, it does not have any magic methods for resolving injection.
 * Second, it requires that you use decorators and placeholders to indicate injection.
-* Third, it does not protect the resource that is injected, so if it mutable it will affect the other modules using the resource.
-* Fourth, it is easy to read the code and know what is happening since everything is marked with placeholders and decorators.
+* Third, it is easy to read the code and know what is happening since everything is marked with placeholders and decorators.
 * Last, it does not have special methods for handling design patterns, but there is a class that can decorate other classes and turn them into singletons.
 
 The reason for doing this is to have a fast and light dependency injection option.
