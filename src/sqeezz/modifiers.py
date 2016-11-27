@@ -1,9 +1,24 @@
 import threading
 import __builtin__
+from inspect import getargspec
+from itertools import izip
+from sqeezz import decorate
 
 
-class Call(object):
-    def __init__(self, call=None, *args, **kwargs):
+class _Common(object):
+    def remove_dup_args(self, func, args, kwargs):
+        for key in self.create_args_dict(func, args).iterkeys():
+            if key in kwargs:
+                del kwargs[key]
+
+    @staticmethod
+    def create_args_dict(func, args):
+        spec = getargspec(func)
+        return dict(izip(spec.args, args))
+
+
+class Call(_Common):
+    def __init__(self, call, *args, **kwargs):
         self.__call = call
         self.args = args
         self.kwargs = kwargs
@@ -11,6 +26,8 @@ class Call(object):
     def __call__(self, *args, **kwargs):
         args += self.args
         kwargs.update(self.kwargs)
+
+        self.remove_dup_args(self.__call, args, kwargs)
 
         return self.__call(*args, **kwargs)
 
@@ -87,7 +104,51 @@ class Singleton(object):
         self.__create_instance()
         return self.__instance(*args, **kwargs)
 
+    def __getattr__(self, name):
+        self.__create_instance()
+        return getattr(self.__instance, name)
+
+    def __setattr__(self, name, value):
+        self.__create_instance()
+        setattr(self.__instance, name, value)
+
     def __create_instance(self):
         if self.__instance is None:
             with threading.RLock():
                 self.__instance = self.__cls()
+
+    def instance(self):
+        return self.__instance
+
+
+class _Type(_Common):
+    def __init__(self, args, kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+
+def _type(func, *args, **kwargs):
+    args = list(args)
+    _strict_type = args.pop()
+    mapped_args = _strict_type.create_args_dict(func, args)
+    _strict_type.kwargs.update(_strict_type.create_args_dict(func, _strict_type.args))
+
+    for key, value in _strict_type.kwargs.iteritems():
+        if key in kwargs:
+            if not isinstance(kwargs[key], value):
+                raise TypeError('{} is not of type {}'.format(
+                        repr(kwargs[key]), value))
+
+        if key in mapped_args:
+            if not isinstance(mapped_args[key], value):
+                raise TypeError('{} is not of type {}'.format(
+                        repr(mapped_args[key]), value))
+
+    return func(*args, **kwargs)
+
+
+def strict_type(*args, **kwargs):
+    def __type(func):
+        return decorate(func, Call(_type, _Type(args, kwargs)))
+
+    return __type

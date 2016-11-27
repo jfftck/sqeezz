@@ -1,54 +1,27 @@
-class Inject(object):
+from inspect import getargspec
+from sqeezz.libs.decorator import decorate
+from sqeezz.modifiers import _Common
+
+
+class _Inject(object):
     __instance = None
 
-    class __Inject(object):
-        class __Providers(object):
-            def __init__(self, providers):
-                self.__providers = providers
-
-            def __getattr__(self, item):
-                try:
-                    return self.__providers[item]
-                except KeyError:
-                    return None
-
+    class __Inject(_Common):
         __current_profile = None
         __default_providers = {}
-        __injection_point = 'injected'
         __profile_providers = {}
 
-        def __call__(self, func):
-            def __inject(*args, **kwargs):
-                if self.injection_point() not in kwargs:
-                    providers = self.__providers()
-
-                    if self.__profile() in self.__p_providers():
-                        providers.update(self.__p_providers()[self.__profile()])
-
-                    kwargs[self.injection_point()] = self.__Providers(providers)
-
-                return func(*args, **kwargs)
-
-            return __inject
-
         @classmethod
-        def __profile(cls):
+        def current_profile(cls):
             return cls.__current_profile
 
         @classmethod
-        def __p_providers(cls):
+        def p_providers(cls):
             return cls.__profile_providers
 
         @classmethod
-        def __providers(cls):
+        def providers(cls):
             return cls.__default_providers.copy()
-
-        @classmethod
-        def injection_point(cls, injection_point=None):
-            if injection_point is not None and isinstance(injection_point, basestring):
-                cls.__injection_point = injection_point
-            else:
-                return cls.__injection_point
 
         @classmethod
         def profile(cls, name=None):
@@ -62,13 +35,16 @@ class Inject(object):
             return cls.__profile_providers.iterkeys()
 
         @classmethod
-        def register(cls, provider_name, provider):
-            if cls.__current_profile is None or provider_name not in cls.__default_providers:
-                cls.__default_providers[provider_name] = provider
+        def register(cls, providers):
+            for name, provider in providers.iteritems():
+                if cls.__current_profile is None or name not in cls.__default_providers:
+                    cls.__default_providers[name] = provider
 
-            if cls.__current_profile is not None:
-                cls.__profile_providers[cls.__current_profile] = {}
-                cls.__profile_providers[cls.__current_profile][provider_name] = provider
+                if cls.__current_profile is not None:
+                    if cls.__current_profile not in cls.__profile_providers:
+                        cls.__profile_providers[cls.__current_profile] = {}
+
+                    cls.__profile_providers[cls.__current_profile][name] = provider
 
     @classmethod
     def __init__(cls):
@@ -80,5 +56,52 @@ class Inject(object):
         return getattr(cls.__instance, name)
 
     @classmethod
-    def __call__(cls, func):
-        return cls.__instance(func)
+    def __call__(cls, func, *args, **kwargs):
+        return cls.__instance(func, args, kwargs)
+
+
+class Injected(object):
+    """
+    This is a placeholder for injected values.
+    """
+
+
+def _inject(func, *args, **kwargs):
+    inj = _Inject()
+    providers = inj.providers()
+    spec = getargspec(func)
+    args = list(args)
+
+    if inj.current_profile() in inj.p_providers():
+        providers.update(inj.p_providers()[inj.current_profile()])
+
+    while Injected in args:
+        args.remove(Injected)
+
+    for provider in spec.args:
+        if provider in providers and provider not in kwargs:
+            kwargs[provider] = providers[provider]
+
+    inj.remove_dup_args(func, args, kwargs)
+
+    return func(*args, **kwargs)
+
+
+def current_profile():
+    return _Inject().current_profile()
+
+
+def inject(func):
+    return decorate(func, _inject)
+
+
+def profile(name=None):
+    _Inject().profile(name)
+
+
+def profiles():
+    return _Inject().profiles()
+
+
+def register(**providers):
+    _Inject().register(providers)
