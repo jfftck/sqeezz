@@ -17,12 +17,13 @@ class _Common(object):
         return dict(izip(spec.args, args))
 
 
-class Call(_Common):
-    def __init__(self, call, *args, **kwargs):
-        self.__call = call
+class _Type(_Common):
+    def __init__(self, args, kwargs):
         self.args = args
         self.kwargs = kwargs
 
+
+class Call(_Common):
     def __call__(self, *args, **kwargs):
         args += self.args
         kwargs.update(self.kwargs)
@@ -31,14 +32,13 @@ class Call(_Common):
 
         return self.__call(*args, **kwargs)
 
+    def __init__(self, call, *args, **kwargs):
+        self.__call = call
+        self.args = args
+        self.kwargs = kwargs
+
 
 class Data(object):
-    def __init__(self, callback, *args, **kwargs):
-        self.__enter = Call(callback, args, kwargs)
-        self.__error = None
-        self.__exit = None
-        self.__open_command = None
-
     def __enter__(self):
         self.__open_command = self.__enter()
 
@@ -57,6 +57,12 @@ class Data(object):
                         **self.__exit.kwargs)
 
         self.__open_command.close()
+
+    def __init__(self, callback, *args, **kwargs):
+        self.__enter = Call(callback, args, kwargs)
+        self.__error = None
+        self.__exit = None
+        self.__open_command = None
 
     @staticmethod
     def __is_callable(obj):
@@ -95,11 +101,6 @@ class File(Data):
 
 
 class Singleton(object):
-    def __init__(self, cls, *args, **kwargs):
-        with threading.RLock():
-            self.__cls = Call(cls, args, kwargs)
-            self.__instance = None
-
     def __call__(self, *args, **kwargs):
         self.__create_instance()
         return self.__instance(*args, **kwargs)
@@ -107,6 +108,11 @@ class Singleton(object):
     def __getattr__(self, name):
         self.__create_instance()
         return getattr(self.__instance, name)
+
+    def __init__(self, cls, *args, **kwargs):
+        with threading.RLock():
+            self.__cls = Call(cls, args, kwargs)
+            self.__instance = None
 
     def __setattr__(self, name, value):
         self.__create_instance()
@@ -119,12 +125,6 @@ class Singleton(object):
 
     def instance(self):
         return self.__instance
-
-
-class _Type(_Common):
-    def __init__(self, args, kwargs):
-        self.args = args
-        self.kwargs = kwargs
 
 
 def _type(func, *args, **kwargs):
@@ -145,6 +145,10 @@ def _type(func, *args, **kwargs):
                         repr(mapped_args[key]), value))
 
     return func(*args, **kwargs)
+
+
+def singleton(cls):
+    return Singleton(cls)
 
 
 def strict_type(*args, **kwargs):

@@ -111,6 +111,8 @@ There are a few modifier classes that can be used.
 
 `Singleton` - This will create a singleton for the class it is decorating. (This is the Decorator pattern and not the decorators that are a part of Python)
 
+`@singleton` - This is a class decorator that will wrap the class in the `Singleton` class above.
+
 `@strict_type` - This will throw a `TypeError` exception if the type is not a match.
 
 More information on the modifiers will be provided later...
