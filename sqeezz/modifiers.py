@@ -1,34 +1,27 @@
-import threading
 import __builtin__
-from inspect import getargspec
-from itertools import izip
-from sqeezz import decorate
+import threading
+
+from libs.decorator import decorate
+from tools import FuncTools
 
 
-class _Common(object):
-    def remove_dup_args(self, func, args, kwargs):
-        for key in self.create_args_dict(func, args).iterkeys():
-            if key in kwargs:
-                del kwargs[key]
-
-    @staticmethod
-    def create_args_dict(func, args):
-        spec = getargspec(func)
-        return dict(izip(spec.args, args))
-
-
-class _Type(_Common):
+class _Type(FuncTools):
     def __init__(self, args, kwargs):
         self.args = args
         self.kwargs = kwargs
 
 
-class Call(_Common):
+class Call(FuncTools):
     def __call__(self, *args, **kwargs):
-        args += self.args
+        args = list(args)
+        args_len = len(self.spec(self.__call).args)
+
+        if (len(args) + len(self.args) < args_len and
+                not self.spec(self.__call).varargs):
+            args += list(self.args)
         kwargs.update(self.kwargs)
 
-        self.remove_dup_args(self.__call, args, kwargs)
+        self.remove_dup_kwargs(self.__call, args, kwargs)
 
         return self.__call(*args, **kwargs)
 
@@ -53,7 +46,7 @@ class Data(object):
 
         if execute_exit and self.__is_callable(self.__exit):
             self.__exit(self.__open_command,
-                        *self.__exit.args,
+                        *self.__exit.spec_args,
                         **self.__exit.kwargs)
 
         self.__open_command.close()
@@ -131,7 +124,7 @@ def _type(func, *args, **kwargs):
     args = list(args)
     _strict_type = args.pop()
     mapped_args = _strict_type.create_args_dict(func, args)
-    _strict_type.kwargs.update(_strict_type.create_args_dict(func, _strict_type.args))
+    _strict_type.kwargs.update(_strict_type.create_args_dict(func, _strict_type.spec_args))
 
     for key, value in _strict_type.kwargs.iteritems():
         if key in kwargs:

@@ -23,7 +23,7 @@ For the basic usage you can do the following.
 
 In the configuration file:
 ```
->>> register(foo=Foo)
+>>> Sqeezz.register(foo=Foo)
 ```
 
 In the application module:
@@ -48,14 +48,14 @@ In the application module:
 ```
 It is recommended that you assign the injected resource to the instance so you can use it in the whole class.
 
-The `register` function allows multiple dependencies to be registered like the following.
+The `register` method allows multiple dependencies to be registered like the following.
 ```
->>> register(foo=Foo, bar=Bar)
+>>> Sqeezz.register(foo=Foo, bar=Bar)
 ```
 Or...
 ```
 >>> resources = {'foo': Foo, 'bar': Bar)
->>> register(**resources)
+>>> Sqeezz.register(**resources)
 ```
 
 One more thing to note is the fact that the `Injected` placeholder is necessary you should put all parameters for the dependencies that are injected at the end of the other parameters for the function/method.
@@ -76,29 +76,29 @@ This is a python syntax requirement and can't be avoided.
 Profiles allow the switching between different sets of dependencies.
 This is designed so that multiple dependencies with the same name can provide different implementations and the application can be more flexible.
 
-To switch/register a profile name you call the `profile` function.
+To switch/register a profile name you call the `profile` method.
 ```
->>> profile('foo')
+>>> Sqeezz.profile('foo')
 ```
 And to switch to using no profile...
 ```
->>> profile()
+>>> Sqeezz.profile()
 ```
 _This will not remove the profile and you can switch back by calling the `profile` function._
 
 To see all of the profiles you just call the `profiles` function.
-There is a `current_profile` function for getting the currently active profile and will be `None` if no profiles are selected.
+There is a `current_profile` method for getting the currently active profile and will be `None` if no profiles are selected.
 ```
->>> print profiles()
+>>> print Sqeezz.profiles()
 ['foo']
->>> print current_profile()
+>>> print Sqeezz.current_profile()
 None
->>> profile('foo')
->>> print current_profile()
+>>> Sqeezz.profile('foo')
+>>> print Sqeezz.current_profile()
 foo
 ```
 
-If you register a dependency that is not in the default dependencies it will add it to both so that switching profiles will not cause the application to fail because the dependency could not be injected.
+_If you register a dependency that is not in the default dependencies it will add to the default so that switching profiles will not cause the application to fail because the dependency could not be injected._
 
 ### Modifiers ###
 There are a few modifier classes that can be used.

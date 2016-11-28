@@ -1,12 +1,11 @@
-from inspect import getargspec
-from sqeezz.libs.decorator import decorate
-from sqeezz.modifiers import _Common
+from libs.decorator import decorate
+from tools import FuncTools
 
 
 class _Inject(object):
     __instance = None
 
-    class __Inject(_Common):
+    class __Inject(FuncTools):
         __current_profile = None
         __default_providers = {}
         __profile_providers = {}
@@ -39,8 +38,7 @@ class _Inject(object):
             for name, provider in providers.iteritems():
                 if cls.__current_profile is None or name not in cls.__default_providers:
                     cls.__default_providers[name] = provider
-
-                if cls.__current_profile is not None:
+                else:
                     if cls.__current_profile not in cls.__profile_providers:
                         cls.__profile_providers[cls.__current_profile] = {}
 
@@ -69,7 +67,7 @@ class Injected(object):
 def _inject(func, *args, **kwargs):
     inj = _Inject()
     providers = inj.providers()
-    spec = getargspec(func)
+    spec = inj.spec(func)
     args = list(args)
 
     if inj.current_profile() in inj.p_providers():
@@ -87,21 +85,27 @@ def _inject(func, *args, **kwargs):
     return func(*args, **kwargs)
 
 
-def current_profile():
-    return _Inject().current_profile()
+class Sqeezz(object):
+    @staticmethod
+    def current_profile():
+        return _Inject().current_profile()
+
+    @staticmethod
+    def inject(func, *args, **kwargs):
+        return _inject(func, *args, **kwargs)
+
+    @staticmethod
+    def profile(name=None):
+        _Inject().profile(name)
+
+    @staticmethod
+    def profiles():
+        return _Inject().profiles()
+
+    @staticmethod
+    def register(**providers):
+        _Inject().register(providers)
 
 
 def inject(func):
     return decorate(func, _inject)
-
-
-def profile(name=None):
-    _Inject().profile(name)
-
-
-def profiles():
-    return _Inject().profiles()
-
-
-def register(**providers):
-    _Inject().register(providers)
