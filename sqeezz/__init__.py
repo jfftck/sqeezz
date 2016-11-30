@@ -2,10 +2,10 @@ from libs.decorator import decorate
 from tools import FuncTools
 
 
-class _Inject(object):
+class _Inject(FuncTools):
     __instance = None
 
-    class __Inject(FuncTools):
+    class __Inject(object):
         __current_profile = None
         __default_providers = {}
         __profile_providers = {}
@@ -80,7 +80,7 @@ def _inject(func, *args, **kwargs):
         if provider in providers and provider not in kwargs:
             kwargs[provider] = providers[provider]
 
-    inj.remove_dup_args(func, args, kwargs)
+    inj.remove_invalid_kwargs(func, args, kwargs)
 
     return func(*args, **kwargs)
 
@@ -92,7 +92,7 @@ class Sqeezz(object):
 
     @staticmethod
     def inject(func, *args, **kwargs):
-        return _inject(func, *args, **kwargs)
+        return _inject(func, *args, **kwargs)()
 
     @staticmethod
     def profile(name=None):

@@ -6,26 +6,71 @@ from tools import FuncTools
 
 
 class _Type(FuncTools):
+    """
+    Stores the @static_type decorator values and extends the FuncTools.
+    """
     def __init__(self, args, kwargs):
+        """
+        Store the arguments and keyword arguments.
+
+        :param args: argument list/tuple
+        :param kwargs: keyword argument dictionary
+        """
         self.args = args
         self.kwargs = kwargs
 
 
 class Call(FuncTools):
+    """
+    Designed to hold a callable with default arguments and will remove extra
+    arguments that would cause an error. It also replaces the default arguments
+    with the arguments given when it is called.
+
+    If you want something like functools.partial then you can structure the
+    function like this:
+
+    def func(arg1, arg2, **kwargs):
+        ...
+
+    Then use the Call object like this:
+
+    Call(func, arg3='some value')
+
+    Now when it is called it will have the third argument in the keywords:
+
+    kwargs['arg3'] # <-- This will have your value.
+    """
     def __call__(self, *args, **kwargs):
-        args = list(args)
-        args_len = len(self.spec(self.__call).args)
+        """
+        Arguments supplied will replace the arguments given during
+        instantiation. The order of preference from highest to lowest is call
+        arguments, call keyword arguments, instantiation arguments,
+        instantiation keyword arguments.
 
-        if (len(args) + len(self.args) < args_len and
-                not self.spec(self.__call).varargs):
-            args += list(self.args)
-        kwargs.update(self.kwargs)
+        :param args: varargs
+        :param kwargs: keywords
+        :return: the stored callable's return value
+        """
+        mapped_args = self.create_args_dict(self.__call, self.args)
+        mapped_passed_args = self.create_args_dict(self.__call, args)
+        copy_kwargs = self.kwargs.copy()
 
-        self.remove_dup_kwargs(self.__call, args, kwargs)
+        copy_kwargs.update(mapped_args)
+        copy_kwargs.update(kwargs)
+        copy_kwargs.update(mapped_passed_args)
 
-        return self.__call(*args, **kwargs)
+        self.remove_invalid_kwargs(self.__call, [], copy_kwargs)
+
+        return self.__call(**copy_kwargs)
 
     def __init__(self, call, *args, **kwargs):
+        """
+        Store the callable and the default arguments and keyword arguments.
+
+        :param call: callable
+        :param args: varargs
+        :param kwargs: keywords
+        """
         self.__call = call
         self.args = args
         self.kwargs = kwargs
@@ -95,12 +140,14 @@ class File(Data):
 
 class Singleton(object):
     def __call__(self, *args, **kwargs):
-        self.__create_instance()
-        return self.__instance(*args, **kwargs)
+        with threading.RLock():
+            self.__create_instance()
+            return self.__instance(*args, **kwargs)
 
     def __getattr__(self, name):
-        self.__create_instance()
-        return getattr(self.__instance, name)
+        with threading.RLock():
+            self.__create_instance()
+            return getattr(self.__instance, name)
 
     def __init__(self, cls, *args, **kwargs):
         with threading.RLock():
@@ -108,8 +155,9 @@ class Singleton(object):
             self.__instance = None
 
     def __setattr__(self, name, value):
-        self.__create_instance()
-        setattr(self.__instance, name, value)
+        with threading.RLock():
+            self.__create_instance()
+            setattr(self.__instance, name, value)
 
     def __create_instance(self):
         if self.__instance is None:
@@ -120,24 +168,25 @@ class Singleton(object):
         return self.__instance
 
 
-def _type(func, *args, **kwargs):
-    args = list(args)
-    _strict_type = args.pop()
-    mapped_args = _strict_type.create_args_dict(func, args)
-    _strict_type.kwargs.update(_strict_type.create_args_dict(func, _strict_type.spec_args))
+def _type(_strict_type):
+    def _inner(func, *args, **kwargs):
+        args = list(args)
+        mapped_args = _strict_type.create_args_dict(func, args)
+        _strict_type.kwargs.update(_strict_type.create_args_dict(func, _strict_type.args))
 
-    for key, value in _strict_type.kwargs.iteritems():
-        if key in kwargs:
-            if not isinstance(kwargs[key], value):
-                raise TypeError('{} is not of type {}'.format(
-                        repr(kwargs[key]), value))
+        for key, value in _strict_type.kwargs.iteritems():
+            if key in kwargs:
+                if not isinstance(kwargs[key], value):
+                    raise TypeError('{} is {} and not of type {}'.format(
+                            key, repr(kwargs[key]), value))
 
-        if key in mapped_args:
-            if not isinstance(mapped_args[key], value):
-                raise TypeError('{} is not of type {}'.format(
-                        repr(mapped_args[key]), value))
+            if key in mapped_args:
+                if not isinstance(mapped_args[key], value):
+                    raise TypeError('{} is {} and not of type {}'.format(
+                            key, repr(mapped_args[key]), value))
 
-    return func(*args, **kwargs)
+        return func(*args, **kwargs)
+    return _inner
 
 
 def singleton(cls):
@@ -146,6 +195,6 @@ def singleton(cls):
 
 def strict_type(*args, **kwargs):
     def __type(func):
-        return decorate(func, Call(_type, _Type(args, kwargs)))
+        return decorate(func, _type(_Type(args, kwargs)))
 
     return __type

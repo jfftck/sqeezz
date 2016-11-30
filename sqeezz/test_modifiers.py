@@ -12,12 +12,12 @@ class TestCallClass(unittest.TestCase):
         test_call = Call(test_func, 1, arg2=2)
         test_data = test_call(3, 4)
 
-        self.assertEqual(test_data, (3, 4))
+        self.assertTupleEqual(test_data, (3, 4))
 
         # Call with no arguments, this would be your defaults for a function.
         test_data = test_call()
 
-        self.assertEqual(test_data, (1, 2))
+        self.assertTupleEqual(test_data, (1, 2))
 
 
 class TestDataClass(unittest.TestCase):
