@@ -297,13 +297,45 @@ class Singleton(object):
         return self.__instance
 
 
-def _strict_type(s_type, allow_none):
+def _strict_type(s_type):
     """
     Private function for the strict_type decorator.
 
     :param s_type: _Type object
     :return: function
     """
+    def _check_type(name, arg_value, required_types):
+        """
+        Private function for checking type and raising a TypeError if not
+        matching.
+        """
+        allow_none, required_type = _extract_none(required_types)
+
+        if not isinstance(arg_value, required_type):
+            if allow_none and arg_value is None:
+                return
+
+            raise TypeError('{} is {} and not of type {}'.format(
+                name, repr(arg_value), required_types))
+
+    def _extract_none(required_types):
+        """
+        Private function for extracting None from a tuple used for testing
+        types.
+        """
+        allow_none = False
+
+        if None in required_types:
+            required_type = list(required_types)
+            allow_none = True
+            required_type.remove(None)
+            if len(required_type) > 1:
+                required_types = tuple(required_type)
+            else:
+                required_types = required_type[0]
+
+        return allow_none, required_types
+
     def _inner(func, *args, **kwargs):
         """
         Private function that is used for the strict_type decorator.
@@ -312,25 +344,12 @@ def _strict_type(s_type, allow_none):
         mapped_args = s_type.create_args_dict(func, args)
         s_type.kwargs.update(s_type.create_args_dict(func, s_type.args))
 
-        def check_type(name, arg_value, required_type):
-            """
-            Private function for checking type and raising a TypeError if not
-            matching.
-            """
-            not_type = not isinstance(arg_value, required_type)
-            not_none_or_type = not_type or arg_value is not None
-
-            if ((not allow_none and not_type) or
-                    (allow_none and not_none_or_type)):
-                raise TypeError('{} is {} and not of type {}'.format(
-                        name, repr(arg_value), required_type))
-
         for key, value in s_type.kwargs.iteritems():
             if key in kwargs:
-                check_type(key, kwargs[key], value)
+                _check_type(key, kwargs[key], value)
 
             if key in mapped_args:
-                check_type(key, mapped_args[key], value)
+                _check_type(key, mapped_args[key], value)
 
         return func(*args, **kwargs)
     return _inner
@@ -346,7 +365,7 @@ def singleton(cls):
     return Singleton(cls)
 
 
-def strict_type(allow_none, *args, **kwargs):
+def strict_type(*args, **kwargs):
     """
     Function/method decorator that raises a TypeError exception when the
     arguments don't have a matching type to the ones provided.
@@ -356,12 +375,10 @@ def strict_type(allow_none, *args, **kwargs):
     :param kwargs: keywords
     :return: decorator function
     """
-    allow_none = allow_none and True
-
     def _inner(func):
         """
         Private decorator function.
         """
-        return decorate(func, _strict_type(_Type(args, kwargs), allow_none))
+        return decorate(func, _strict_type(_Type(args, kwargs)))
 
     return _inner
