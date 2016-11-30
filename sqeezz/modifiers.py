@@ -318,10 +318,10 @@ def _strict_type(s_type, allow_none):
             matching.
             """
             not_type = not isinstance(arg_value, required_type)
-            not_none = allow_none and (not_type or arg_value is not None)
-            strict_not_type = not allow_none and not_type
+            not_none_or_type = not_type or arg_value is not None
 
-            if strict_not_type or not_none:
+            if ((not allow_none and not_type) or
+                    (allow_none and not_none_or_type)):
                 raise TypeError('{} is {} and not of type {}'.format(
                         name, repr(arg_value), required_type))
 
@@ -356,6 +356,8 @@ def strict_type(allow_none, *args, **kwargs):
     :param kwargs: keywords
     :return: decorator function
     """
+    allow_none = allow_none and True
+
     def _inner(func):
         """
         Private decorator function.
