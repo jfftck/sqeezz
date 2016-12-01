@@ -370,7 +370,6 @@ def strict_type(*args, **kwargs):
     Function/method decorator that raises a TypeError exception when the
     arguments don't have a matching type to the ones provided.
 
-    :param allow_none: boolean
     :param args: varargs
     :param kwargs: keywords
     :return: decorator function
