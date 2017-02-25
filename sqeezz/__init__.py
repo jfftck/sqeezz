@@ -1,8 +1,13 @@
+import inspect
+
 from libs.decorator import decorate
-from tools import FuncTools
+from utils import FuncTools
 
 
 class _Inject(FuncTools):
+    """
+    This is a private singleton class that stores the injection information.
+    """
     __instance = None
 
     class __Inject(object):
@@ -58,7 +63,7 @@ class _Inject(FuncTools):
         return cls.__instance(func, args, kwargs)
 
 
-class Injected(object):
+class Injected:
     """
     This is a placeholder for injected values.
     """
@@ -67,22 +72,25 @@ class Injected(object):
 def _inject(func, *args, **kwargs):
     inj = _Inject()
     providers = inj.providers()
-    spec = inj.spec(func)
-    args = list(args)
+    mapped_args = inj.create_args_dict(func, args)
 
-    if inj.current_profile() in inj.p_providers():
-        providers.update(inj.p_providers()[inj.current_profile()])
+    def set_profile_providers():
+        if inj.current_profile() in inj.p_providers():
+            providers.update(inj.p_providers()[inj.current_profile()])
 
-    while Injected in args:
-        args.remove(Injected)
+    def inject_provider():
+        kwargs.update(mapped_args)
 
-    for provider in spec.args:
-        if provider in providers and provider not in kwargs:
-            kwargs[provider] = providers[provider]
+        for arg_name, provider in kwargs.iteritems():
+            if provider is Injected:
+                kwargs[arg_name] = providers[arg_name]
+
+    set_profile_providers()
+    inject_provider()
 
     inj.remove_invalid_kwargs(func, args, kwargs)
 
-    return func(*args, **kwargs)
+    return func(**kwargs)
 
 
 class Sqeezz(object):
@@ -103,8 +111,11 @@ class Sqeezz(object):
         return _Inject().profiles()
 
     @staticmethod
-    def register(**providers):
-        _Inject().register(providers)
+    def register(*providers, **kwproviders):
+        for provider in providers:
+            if inspect.isclass(provider):
+                kwproviders[provider.__name__] = provider
+        _Inject().register(kwproviders)
 
 
 def inject(func):

@@ -1,6 +1,6 @@
 import unittest
 
-from modifiers import *
+from sqeezz_modifiers import *
 
 
 class TestCallClass(unittest.TestCase):
@@ -30,21 +30,6 @@ class TestDataClass(unittest.TestCase):
 
 class TestFileClass(unittest.TestCase):
     def test_open(self):
-        self.fail()
-
-
-class TestSingletonClass(unittest.TestCase):
-    def test_instance(self):
-        self.fail()
-
-
-class TestSingletonDecorator(unittest.TestCase):
-    def test_singleton(self):
-        self.fail()
-
-
-class TestPrivateTypeFunction(unittest.TestCase):
-    def test__type(self):
         self.fail()
 
 

@@ -17,7 +17,7 @@ class FuncTools(object):
         if kwargs:
             spec = FuncTools.spec(func)
             for key in FuncTools.create_args_dict(func, args).iterkeys():
-                if key in kwargs:
+                if key in kwargs and spec.keywords is not None:
                     del kwargs[key]
 
             if spec.keywords is None:

@@ -1,6 +1,6 @@
 import unittest
 
-from tools import FuncTools
+from utils import FuncTools
 
 
 class TestFuncToolsClass(unittest.TestCase):

@@ -1,14 +1,15 @@
-# Sqeezz #
-## Simple and Easy Dependency Injection ##
+Sqeezz
+======
+Simple and Easy Dependency Injection
+------------------------------------
 ### About the Module ###
 Sqeezz is designed for Python 2.6 and 2.7, a 3.0+ version is planned and should not be too different.
 
 The design for Sqeezz is to have simple and explict injection.
 
 * First, it does not have any magic methods for resolving injection.
-* Second, it requires that you use decorators and placeholders to indicate injection.
-* Third, it is easy to read the code and know what is happening since everything is marked with placeholders and decorators.
-* Last, it does not have special methods for handling design patterns, but there is a class that can decorate other classes and turn them into singletons.
+* Second, it requires that you use decorators and placeholders to indicate injection which makes the code easy to read and understand.
+* Last, it is smaller than other solutions since it does not have to scan your files to connect the classes.
 
 The reason for doing this is to have a fast and light dependency injection option.
 There are many options that want to do all of the work, but in doing so they require time and space to calculate the dependency mappings, and end up creating a resource heavy library that slows the application.
@@ -23,13 +24,13 @@ For the basic usage you can do the following.
 
 In the configuration file:
 ```
->>> Sqeezz.register(foo=Foo)
+>>> Sqeezz.register(Foo)
 ```
 
 In the application module:
 ```
 >>> @inject
-... def bar(foo=Injected):
+... def bar(Foo=Injected):
 ...    ...
 ```
 _Please note the `Injected` placeholder, this is needed as the original function signature is preserved and will throw an error that the function is missing an argument (or more if you are injecting multiple dependencies). This design may change later, but it is required for now._
@@ -42,13 +43,13 @@ In the application module:
 ```
 >>> class Bar:
 ...    @inject
-...    def __init__(self, foo=Injected):
+...    def __init__(self, Foo=Injected):
 ...        self.foo = foo
 ...        ...
 ```
 It is recommended that you assign the injected resource to the instance so you can use it in the whole class.
 
-The `register` method allows multiple dependencies to be registered like the following.
+The `register` method allows multiple dependencies and aliases to be registered like the following.
 ```
 >>> Sqeezz.register(foo=Foo, bar=Bar)
 ```
@@ -58,13 +59,13 @@ Or...
 >>> Sqeezz.register(**resources)
 ```
 
-One more thing to note is the fact that the `Injected` placeholder is necessary you should put all parameters for the dependencies that are injected at the end of the other parameters for the function/method.
+One more thing to note is the fact that the `Injected` placeholder is necessary and you must put all parameters for the dependencies that are injected at the end of the other parameters for the function/method.
 ```
 >>> @inject
 ... def foo(x, y, z, bar=Injected):
 ...    ...
 ```
-This will work, but the following will not.
+Above code will work, but the following will not.
 ```
 >>> @inject
 ... def foo(bar=Injected, x, y, z):
@@ -103,16 +104,22 @@ _If you register a dependency that is not in the default dependencies it will ad
 ### Modifiers ###
 There are a few modifier classes that can be used.
 
-`Call` - This is similar to the `partial` function in the `functools` module, but removes keyword arguments that conflict with the arguments.
+#### Callables ####
+`Call(callback:callable, *args, **kwargs)`  
+This is similar to the `partial` function in the `functools` module, but removes keyword arguments that conflict with the arguments.
 
-`Data` - This is designed to build functions that can be used with the `with` statement.
+#### File-Like Objects ####
+`Data(callback:callable, *args, **kwargs)`  
+This is designed to build functions that can be used with the `with` statement, like databases.
 
-`File` - This extends the `Data` class to open files.
+`File(path:string, file_command?: callable, *args, **kwargs)`  
+This extends the `Data` class to open files.
 
-`Singleton` - This will create a singleton for the class it is decorating. (This is the Decorator pattern and not the decorators that are a part of Python)
+#### Strict Type Matching ####
+`@strict_type(*args:[class|(class, ...), ...], **kwargs: {var_name: class|(class, ...), ...})`  
+This will throw a `TypeError` exception if the type is not a match.
 
-`@singleton` - This is a class decorator that will wrap the class in the `Singleton` class above.
-
-`@strict_type` - This will throw a `TypeError` exception if the type is not a match.
+`test_type(test:boolean)`  
+This sets if the `@strict_type` will evaluate the types being passed (defaults to: `False`).
 
 More information on the modifiers will be provided later...

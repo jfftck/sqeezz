@@ -1,8 +1,7 @@
 import __builtin__
-import threading
 
-from libs.decorator import decorate
-from tools import FuncTools
+from sqeezz.libs.decorator import decorate
+from sqeezz.utils import FuncTools
 
 
 class _Type(FuncTools):
@@ -18,6 +17,18 @@ class _Type(FuncTools):
         """
         self.args = args
         self.kwargs = kwargs
+
+
+class _TestType(object):
+
+    instance = None
+
+    class _Instance(object):
+        test = False
+
+    def __init__(self):
+        if self.instance is None:
+            self.instance = self._Instance()
 
 
 class Call(FuncTools):
@@ -63,15 +74,15 @@ class Call(FuncTools):
 
         return self.__call(**copy_kwargs)
 
-    def __init__(self, call, *args, **kwargs):
+    def __init__(self, callback, *args, **kwargs):
         """
         Store the callable and the default arguments and keyword arguments.
 
-        :param call: callable
+        :param callback: callable
         :param args: varargs
         :param kwargs: keywords
         """
-        self.__call = call
+        self.__call = callback
         self.args = args
         self.kwargs = kwargs
 
@@ -222,81 +233,6 @@ class File(Data):
         return self.__open(args, kwargs)
 
 
-class Singleton(object):
-    """
-    Creates a wrapper around an object to make it a singleton.
-    """
-    def __call__(self, *args, **kwargs):
-        """
-        Calls the instance with the provided arguments.
-
-        :param args: varargs
-        :param kwargs: keywords
-        :return: object
-        """
-        with threading.RLock():
-            self.__create_instance()
-            return self.__instance(*args, **kwargs)
-
-    def __getattr__(self, name):
-        """
-        Get the instance attribute.
-
-        :param name: string
-        :return: method/attribute from the instance
-        """
-        with threading.RLock():
-            self.__create_instance()
-            return getattr(self.__instance, name)
-
-    def __init__(self, cls, *args, **kwargs):
-        """
-        Store the class and the instantiation arguments.
-
-        :param cls: object
-        :param args: varargs
-        :param kwargs: keywords
-        """
-        with threading.RLock():
-            self.__cls = Call(cls, args, kwargs)
-            self.__instance = None
-
-    def __setattr__(self, name, value):
-        """
-        Set the instance attribute.
-
-        :param name: string
-        :param value: object
-        :return: None
-        """
-        with threading.RLock():
-            self.__create_instance()
-            setattr(self.__instance, name, value)
-
-    def __create_instance(self):
-        """
-        Create the instance if it is not instantiated.
-
-        :return: None
-        """
-        if self.__instance is None:
-            with threading.RLock():
-                self.__instance = self.__cls()
-
-    def instance(self):
-        """
-        Direct access to the instance object.
-
-        This is useful for using any of the magic methods, like __add__, that
-        the object supports.
-
-        The Singleton object does not override any of the magic methods.
-
-        :return: object
-        """
-        return self.__instance
-
-
 def _strict_type(s_type):
     """
     Private function for the strict_type decorator.
@@ -340,29 +276,21 @@ def _strict_type(s_type):
         """
         Private function that is used for the strict_type decorator.
         """
-        args = list(args)
-        mapped_args = s_type.create_args_dict(func, args)
-        s_type.kwargs.update(s_type.create_args_dict(func, s_type.args))
 
-        for key, value in s_type.kwargs.iteritems():
-            if key in kwargs:
-                _check_type(key, kwargs[key], value)
+        if _TestType().instance.test:
+            args = list(args)
+            mapped_args = s_type.create_args_dict(func, args)
+            s_type.kwargs.update(s_type.create_args_dict(func, s_type.args))
 
-            if key in mapped_args:
-                _check_type(key, mapped_args[key], value)
+            for key, value in s_type.kwargs.iteritems():
+                if key in kwargs:
+                    _check_type(key, kwargs[key], value)
+
+                if key in mapped_args:
+                    _check_type(key, mapped_args[key], value)
 
         return func(*args, **kwargs)
     return _inner
-
-
-def singleton(cls):
-    """
-    Class decorator the wraps the provided class in the singleton class.
-
-    :param cls: class
-    :return: Singleton object
-    """
-    return Singleton(cls)
 
 
 def strict_type(*args, **kwargs):
@@ -381,3 +309,7 @@ def strict_type(*args, **kwargs):
         return decorate(func, _strict_type(_Type(args, kwargs)))
 
     return _inner
+
+
+def test_type(test):
+    _TestType().instance.test = test
