@@ -1,8 +1,10 @@
-from inspect import getargspec
+from inspect import getargspec, isclass
 from itertools import izip
 
+import __builtin__
 
-class FuncTools(object):
+
+class FuncUtils(object):
     @staticmethod
     def remove_invalid_kwargs(func, args, kwargs):
         """
@@ -15,8 +17,8 @@ class FuncTools(object):
         :return: None
         """
         if kwargs:
-            spec = FuncTools.spec(func)
-            for key in FuncTools.create_args_dict(func, args).iterkeys():
+            spec = FuncUtils.spec(func)
+            for key in FuncUtils.create_args_dict(func, args).iterkeys():
                 if key in kwargs and spec.keywords is not None:
                     del kwargs[key]
 
@@ -35,16 +37,46 @@ class FuncTools(object):
         :param args: argument list/tuple
         :return: dictionary of arguments mapped to parameters
         """
-        spec_args = FuncTools.spec(func).args
+        spec_args = FuncUtils.spec(func).args
 
         return dict(izip(spec_args, args))
 
     @staticmethod
     def spec(func):
         """
-        A wrapper for the inspect.getargspec function.
+        A wrapper for the inspect.getargspec method.
 
         :param func: callable
         :return: ArgSpec object
         """
         return getargspec(func)
+
+
+class ClassUtils(object):
+    @staticmethod
+    def is_class(cls):
+        """
+        A wrapper for the inspect.isclass method.
+
+        :param cls: class
+        :return: boolean
+        """
+        return isclass(cls)
+
+
+def is_callable(obj):
+    """
+    Private method for checking if an object is callable.
+
+    :param obj: object
+    :return: boolean
+    """
+    _callable = False
+
+    if hasattr(obj, 'callback'):
+        if hasattr(__builtin__, 'callable'):
+            _callable = callable(obj.callback)
+        else:
+            _callable = hasattr(obj.callback, '__call__')
+
+    return _callable

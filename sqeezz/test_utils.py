@@ -1,6 +1,6 @@
 import unittest
 
-from utils import FuncTools
+from utils import FuncUtils
 
 
 class TestFuncToolsClass(unittest.TestCase):
@@ -13,7 +13,7 @@ class TestFuncToolsClass(unittest.TestCase):
         args = (1, 2)
         kwargs = {'arg1': 3}
 
-        FuncTools.remove_invalid_kwargs(test_func, args, kwargs)
+        FuncUtils.remove_invalid_kwargs(test_func, args, kwargs)
 
         self.assertTupleEqual(args, (1, 2))
         self.assertDictEqual(kwargs, {})
@@ -23,7 +23,7 @@ class TestFuncToolsClass(unittest.TestCase):
         args = (1, )
         kwargs = {'arg2': 2}
 
-        FuncTools.remove_invalid_kwargs(test_func, args, kwargs)
+        FuncUtils.remove_invalid_kwargs(test_func, args, kwargs)
 
         self.assertTupleEqual(args, (1, ))
         self.assertDictEqual(kwargs, {'arg2': 2})
@@ -32,7 +32,7 @@ class TestFuncToolsClass(unittest.TestCase):
         def test_func(arg1, arg2):
             pass
 
-        mapped_args = FuncTools.create_args_dict(test_func, (1, 2))
+        mapped_args = FuncUtils.create_args_dict(test_func, (1, 2))
 
         self.assertDictEqual(mapped_args, {'arg1': 1, 'arg2': 2})
 

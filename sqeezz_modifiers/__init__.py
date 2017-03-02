@@ -1,10 +1,11 @@
-import __builtin__
-
 from sqeezz.libs.decorator import decorate
-from sqeezz.utils import FuncTools
+from sqeezz.utils import FuncUtils, is_callable
 
 
-class _Type(FuncTools):
+_test_type = False
+
+
+class _Type(FuncUtils):
     """
     Stores the @static_type decorator values and extends the FuncTools.
     """
@@ -19,19 +20,7 @@ class _Type(FuncTools):
         self.kwargs = kwargs
 
 
-class _TestType(object):
-
-    instance = None
-
-    class _Instance(object):
-        test = False
-
-    def __init__(self):
-        if self.instance is None:
-            self.instance = self._Instance()
-
-
-class Call(FuncTools):
+class Call(FuncUtils):
     """
     Designed to hold a callable with default arguments and will remove extra
     arguments that would cause an error. It also replaces the default arguments
@@ -122,11 +111,11 @@ class Data(object):
         """
         execute_exit = True
 
-        if self.__is_callable(self.__exception) and exc_type:
+        if is_callable(self.__exception) and exc_type:
             execute_exit = self.__exception((exc_type, exc_val, exc_tb),
                                             self.__open_command)
 
-        if execute_exit and self.__is_callable(self.__exit):
+        if execute_exit and is_callable(self.__exit):
             self.__exit(self.__open_command,
                         *self.__exit.spec_args,
                         **self.__exit.kwargs)
@@ -146,24 +135,6 @@ class Data(object):
         self.__exception = None
         self.__exit = None
         self.__open_command = None
-
-    @staticmethod
-    def __is_callable(obj):
-        """
-        Private method for checking if an object is callable.
-
-        :param obj: an object
-        :return: boolean
-        """
-        is_callable = False
-
-        if hasattr(obj, 'callback'):
-            if hasattr(__builtin__, 'callable'):
-                is_callable = callable(obj.callback)
-            else:
-                is_callable = hasattr(obj.callback, '__call__')
-
-        return is_callable
 
     def exception(self, callback):
         """
@@ -261,14 +232,17 @@ def _strict_type(s_type):
         """
         allow_none = False
 
-        if None in required_types:
-            required_type = list(required_types)
-            allow_none = True
-            required_type.remove(None)
-            if len(required_type) > 1:
-                required_types = tuple(required_type)
-            else:
-                required_types = required_type[0]
+        try:
+            if None in required_types:
+                required_type = list(required_types)
+                allow_none = True
+                required_type.remove(None)
+                if len(required_type) > 1:
+                    required_types = tuple(required_type)
+                else:
+                    required_types = required_type[0]
+        except TypeError:
+            pass
 
         return allow_none, required_types
 
@@ -277,7 +251,7 @@ def _strict_type(s_type):
         Private function that is used for the strict_type decorator.
         """
 
-        if _TestType().instance.test:
+        if _test_type:
             args = list(args)
             mapped_args = s_type.create_args_dict(func, args)
             s_type.kwargs.update(s_type.create_args_dict(func, s_type.args))
@@ -312,4 +286,11 @@ def strict_type(*args, **kwargs):
 
 
 def test_type(test):
-    _TestType().instance.test = test
+    """
+    Enable or disable strict type testing (defaults to False).
+
+    :param test: boolean
+    :return: None
+    """
+    global _test_type
+    _test_type = test

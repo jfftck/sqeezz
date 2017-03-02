@@ -1,10 +1,8 @@
-import inspect
-
 from libs.decorator import decorate
-from utils import FuncTools
+from utils import FuncUtils, ClassUtils
 
 
-class _Inject(FuncTools):
+class _Inject(FuncUtils):
     """
     This is a private singleton class that stores the injection information.
     """
@@ -40,14 +38,15 @@ class _Inject(FuncTools):
 
         @classmethod
         def register(cls, providers):
+            cp = cls.__current_profile
             for name, provider in providers.iteritems():
-                if cls.__current_profile is None or name not in cls.__default_providers:
+                if cp is None or name not in cls.__default_providers:
                     cls.__default_providers[name] = provider
                 else:
-                    if cls.__current_profile not in cls.__profile_providers:
-                        cls.__profile_providers[cls.__current_profile] = {}
+                    if cp not in cls.__profile_providers:
+                        cls.__profile_providers[cp] = {}
 
-                    cls.__profile_providers[cls.__current_profile][name] = provider
+                    cls.__profile_providers[cp][name] = provider
 
     @classmethod
     def __init__(cls):
@@ -63,10 +62,35 @@ class _Inject(FuncTools):
         return cls.__instance(func, args, kwargs)
 
 
-class Injected:
+class Injected(None):
     """
     This is a placeholder for injected values.
     """
+
+
+class Sqeezz(object):
+    @staticmethod
+    def current_profile():
+        return _Inject().current_profile()
+
+    @staticmethod
+    def inject(func, *args, **kwargs):
+        return _inject(func, *args, **kwargs)()
+
+    @staticmethod
+    def profile(name=None):
+        _Inject().profile(name)
+
+    @staticmethod
+    def profiles():
+        return _Inject().profiles()
+
+    @staticmethod
+    def register(*providers, **kwproviders):
+        for provider in providers:
+            if hasattr(provider, '__name__'):
+                kwproviders[provider.__name__] = provider
+        _Inject().register(kwproviders)
 
 
 def _inject(func, *args, **kwargs):
@@ -93,30 +117,23 @@ def _inject(func, *args, **kwargs):
     return func(**kwargs)
 
 
-class Sqeezz(object):
-    @staticmethod
-    def current_profile():
-        return _Inject().current_profile()
+def _register(name):
+    def _inner(call, *args, **kwargs):
+        if name:
+            Sqeezz.register(**{name: call})
+        else:
+            Sqeezz.register(call)
 
-    @staticmethod
-    def inject(func, *args, **kwargs):
-        return _inject(func, *args, **kwargs)()
-
-    @staticmethod
-    def profile(name=None):
-        _Inject().profile(name)
-
-    @staticmethod
-    def profiles():
-        return _Inject().profiles()
-
-    @staticmethod
-    def register(*providers, **kwproviders):
-        for provider in providers:
-            if inspect.isclass(provider):
-                kwproviders[provider.__name__] = provider
-        _Inject().register(kwproviders)
+        return call(*args, **kwargs)
+    return _inner
 
 
 def inject(func):
     return decorate(func, _inject)
+
+
+def register(name=None):
+    def _inner(call):
+        return decorate(call, _register(name))
+
+    return _inner
