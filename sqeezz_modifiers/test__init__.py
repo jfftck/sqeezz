@@ -1,6 +1,6 @@
+# coding=utf-8
 import unittest
-
-from modifiers import *
+from sqeezz_modifiers import *
 
 
 class TestCallClass(unittest.TestCase):
@@ -12,12 +12,12 @@ class TestCallClass(unittest.TestCase):
         test_call = Call(test_func, 1, arg2=2)
         test_data = test_call(3, 4)
 
-        self.assertEqual(test_data, (3, 4))
+        self.assertTupleEqual(test_data, (3, 4))
 
         # Call with no arguments, this would be your defaults for a function.
         test_data = test_call()
 
-        self.assertEqual(test_data, (1, 2))
+        self.assertTupleEqual(test_data, (1, 2))
 
 
 class TestDataClass(unittest.TestCase):
@@ -30,21 +30,6 @@ class TestDataClass(unittest.TestCase):
 
 class TestFileClass(unittest.TestCase):
     def test_open(self):
-        self.fail()
-
-
-class TestSingletonClass(unittest.TestCase):
-    def test_instance(self):
-        self.fail()
-
-
-class TestSingletonDecorator(unittest.TestCase):
-    def test_singleton(self):
-        self.fail()
-
-
-class TestPrivateTypeFunction(unittest.TestCase):
-    def test__type(self):
         self.fail()
 
 

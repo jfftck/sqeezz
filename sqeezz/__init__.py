@@ -1,11 +1,15 @@
+# coding=utf-8
 from libs.decorator import decorate
-from tools import FuncTools
+from utils import FuncUtils, ClassUtils
 
 
-class _Inject(object):
+class _Inject(FuncUtils):
+    """
+    This is a private singleton class that stores the injection information.
+    """
     __instance = None
 
-    class __Inject(FuncTools):
+    class __Inject(object):
         __current_profile = None
         __default_providers = {}
         __profile_providers = {}
@@ -35,14 +39,15 @@ class _Inject(object):
 
         @classmethod
         def register(cls, providers):
+            cp = cls.__current_profile
             for name, provider in providers.iteritems():
-                if cls.__current_profile is None or name not in cls.__default_providers:
+                if cp is None or name not in cls.__default_providers:
                     cls.__default_providers[name] = provider
                 else:
-                    if cls.__current_profile not in cls.__profile_providers:
-                        cls.__profile_providers[cls.__current_profile] = {}
+                    if cp not in cls.__profile_providers:
+                        cls.__profile_providers[cp] = {}
 
-                    cls.__profile_providers[cls.__current_profile][name] = provider
+                    cls.__profile_providers[cp][name] = provider
 
     @classmethod
     def __init__(cls):
@@ -64,27 +69,6 @@ class Injected(object):
     """
 
 
-def _inject(func, *args, **kwargs):
-    inj = _Inject()
-    providers = inj.providers()
-    spec = inj.spec(func)
-    args = list(args)
-
-    if inj.current_profile() in inj.p_providers():
-        providers.update(inj.p_providers()[inj.current_profile()])
-
-    while Injected in args:
-        args.remove(Injected)
-
-    for provider in spec.args:
-        if provider in providers and provider not in kwargs:
-            kwargs[provider] = providers[provider]
-
-    inj.remove_dup_args(func, args, kwargs)
-
-    return func(*args, **kwargs)
-
-
 class Sqeezz(object):
     @staticmethod
     def current_profile():
@@ -92,7 +76,7 @@ class Sqeezz(object):
 
     @staticmethod
     def inject(func, *args, **kwargs):
-        return _inject(func, *args, **kwargs)
+        return _inject(func, *args, **kwargs)()
 
     @staticmethod
     def profile(name=None):
@@ -103,9 +87,54 @@ class Sqeezz(object):
         return _Inject().profiles()
 
     @staticmethod
-    def register(**providers):
-        _Inject().register(providers)
+    def register(*providers, **kwproviders):
+        for provider in providers:
+            if hasattr(provider, '__name__'):
+                kwproviders[provider.__name__] = provider
+        _Inject().register(kwproviders)
+
+
+def _inject(func, *args, **kwargs):
+    inj = _Inject()
+    providers = inj.providers()
+    mapped_args = inj.create_args_dict(func, args)
+
+    def set_profile_providers():
+        if inj.current_profile() in inj.p_providers():
+            providers.update(inj.p_providers()[inj.current_profile()])
+
+    def inject_provider():
+        kwargs.update(mapped_args)
+
+        for arg_name, provider in kwargs.iteritems():
+            if provider is Injected:
+                kwargs[arg_name] = providers[arg_name]
+
+    set_profile_providers()
+    inject_provider()
+
+    inj.remove_invalid_kwargs(func, args, kwargs)
+
+    return func(**kwargs)
+
+
+def _register(name):
+    def _inner(call, *args, **kwargs):
+        if name:
+            Sqeezz.register(**{name: call})
+        else:
+            Sqeezz.register(call)
+
+        return call(*args, **kwargs)
+    return _inner
 
 
 def inject(func):
     return decorate(func, _inject)
+
+
+def register(name=None):
+    def _inner(call):
+        return decorate(call, _register(name))
+
+    return _inner
