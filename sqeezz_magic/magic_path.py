@@ -27,9 +27,12 @@ class Path(object):
         return obj
 
     def __contains__(self, item):
-        while iglob(os.path.join(str(self), item)):
-            return True
-        return False
+        try:
+            iglob(os.path.join(str(self), item)).next()
+        except StopIteration:
+            return False
+
+        return True
 
     def __div__(self, other):
         path = self.__add_path(other)
@@ -58,7 +61,7 @@ class Path(object):
         if other[0] != '.':
             other = '.' + other
 
-        return Path().set('{}{}'.format(
+        return Path('{}{}'.format(
                 os.path.splitext(unicode(self))[0], other))
 
     def __repr__(self):
@@ -137,7 +140,7 @@ class Path(object):
 
         return self
 
-    def set(self, path):
+    def set(self, path, file_name=None):
         if isinstance(path, Path):
             path = unicode(path)
 
@@ -151,6 +154,9 @@ class Path(object):
             self.__drive, path = os.path.splitdrive(path)
             self.__path = []
             self.__set_path(path)
+
+        if file_name is not None:
+            self.file = file_name
 
         return self
 
@@ -229,9 +235,9 @@ class Path(object):
         return self.__file
 
     @file.setter
-    def file(self, filename):
-        if isinstance(filename, (str, unicode)):
-            self.__file = filename
+    def file(self, file_name):
+        if isinstance(file_name, (str, unicode)):
+            self.__file = file_name
 
     @property
     def full_path(self):
