@@ -1,7 +1,21 @@
+# coding=utf-8
+from importlib import import_module
 from inspect import getargspec, isclass
 from itertools import izip
 
 import __builtin__
+
+
+class ClassUtils(object):
+    @staticmethod
+    def is_class(cls):
+        """
+        A wrapper for the inspect.isclass method.
+
+        :param cls: class
+        :return: boolean
+        """
+        return isclass(cls)
 
 
 class FuncUtils(object):
@@ -19,7 +33,7 @@ class FuncUtils(object):
         if kwargs:
             spec = FuncUtils.spec(func)
             for key in FuncUtils.create_args_dict(func, args).iterkeys():
-                if key in kwargs and spec.keywords is not None:
+                if key in kwargs:
                     del kwargs[key]
 
             if spec.keywords is None:
@@ -52,16 +66,10 @@ class FuncUtils(object):
         return getargspec(func)
 
 
-class ClassUtils(object):
+class ImportUtils(object):
     @staticmethod
-    def is_class(cls):
-        """
-        A wrapper for the inspect.isclass method.
-
-        :param cls: class
-        :return: boolean
-        """
-        return isclass(cls)
+    def import_module(name, package=None):
+        return name, import_module(name, package)
 
 
 def is_callable(obj):
@@ -71,12 +79,10 @@ def is_callable(obj):
     :param obj: object
     :return: boolean
     """
-    _callable = False
 
-    if hasattr(obj, 'callback'):
-        if hasattr(__builtin__, 'callable'):
-            _callable = callable(obj.callback)
-        else:
-            _callable = hasattr(obj.callback, '__call__')
+    if hasattr(__builtin__, 'callable'):
+        _callable = callable(obj)
+    else:
+        _callable = hasattr(obj, '__call__')
 
     return _callable

@@ -1,3 +1,4 @@
+# coding=utf-8
 from libs.decorator import decorate
 from utils import FuncUtils, ClassUtils
 
@@ -62,7 +63,7 @@ class _Inject(FuncUtils):
         return cls.__instance(func, args, kwargs)
 
 
-class Injected(None):
+class Injected(object):
     """
     This is a placeholder for injected values.
     """

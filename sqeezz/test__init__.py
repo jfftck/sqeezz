@@ -1,7 +1,7 @@
-import unittest
+from unittest import TestCase
 
 
-class TestSqeezz(unittest.TestCase):
+class TestSqeezz(TestCase):
     def test_current_profile(self):
         self.fail()
 
@@ -16,7 +16,3 @@ class TestSqeezz(unittest.TestCase):
 
     def test_register(self):
         self.fail()
-
-
-if __name__ == '__main__':
-    unittest.main()

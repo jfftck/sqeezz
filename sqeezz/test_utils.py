@@ -1,9 +1,9 @@
+# coding=utf-8
 import unittest
-
 from utils import FuncUtils
 
 
-class TestFuncToolsClass(unittest.TestCase):
+class TestFuncUtilsClass(unittest.TestCase):
     def test_remove_invalid_kwargs(self):
         def test_func(arg1, arg2):
             pass

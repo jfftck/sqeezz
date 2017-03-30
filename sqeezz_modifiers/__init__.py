@@ -1,3 +1,4 @@
+# coding=utf-8
 from sqeezz.libs.decorator import decorate
 from sqeezz.utils import FuncUtils, is_callable
 
