@@ -3,20 +3,42 @@ import os
 from glob import iglob
 
 
+class File(object):
+    def __init__(self, _file):
+        self.__file = _file
+        self.__mode = 'r'
+        self.__buffering = -1
+        self.__opened = None
+
+    def __enter__(self):
+        if self.__opened is None:
+            self.__opened = open(self.__file, self.__mode, self.__buffering)
+
+        return self.__opened
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.__opened.close()
+        self.__opened = None
+
+    def buffering(self, buffering=-1):
+        self.__buffering = buffering
+
+    def mode(self, mode='r'):
+        self.__mode = mode
+
+        return self
+
+
 class Path(object):
     def __init__(self, path=None):
-        self.__depth = None
         self.__drive = u''
         self.__file = None
-        self.__follow_links = False
-        self.__on_error = None
         self.__path = []
-        self.__top_down = True
 
         self.set(path)
 
     def __add__(self, other):
-        if isinstance(other, Path):
+        if type(other) is Path:
             if (unicode(other).startswith('/') or
                     unicode(other).startswith('\\')):
                 other = os.path.join(*other[1:])
@@ -25,6 +47,9 @@ class Path(object):
             obj = unicode(self) + other
 
         return obj
+
+    def __call__(self, *args, **kwargs):
+        return unicode(self)
 
     def __contains__(self, item):
         try:
@@ -39,9 +64,6 @@ class Path(object):
 
         return Path(self.__build_path(path))
 
-    def __idiv__(self, other):
-        return self.up() / other
-
     def __eq__(self, other):
         return self.__get_path == unicode(other)
 
@@ -49,7 +71,7 @@ class Path(object):
         return self.__path_parts[item]
 
     def __iter__(self):
-        return self.__walk()
+        return iter(Walker(self))
 
     def __len__(self):
         return len(unicode(self))
@@ -74,18 +96,6 @@ class Path(object):
     def __build_path(path):
         return os.path.normpath(os.path.join(*path))
 
-    @staticmethod
-    def __dir_path(dirs):
-        for d in dirs:
-            yield Path(d)
-
-    @staticmethod
-    def __file_path(files):
-        for f in files:
-            path = Path()
-            path.file = f
-            yield path
-
     def __add_path(self, directory):
         path = self.__path[:]
 
@@ -103,42 +113,14 @@ class Path(object):
         if head and tail:
             self.__set_path(head)
 
-    def __walk(self):
-        if not self.exists:
-            raise StopIteration
-
-        walker = os.walk(unicode(self),
-                         self.__top_down,
-                         self.__on_error,
-                         self.__follow_links)
-
-        for path, dirs, files in walker:
-            children = path.replace(unicode(self), '').split(os.sep)
-
-            if self.__depth is not None and len(children) > self.__depth:
-                del dirs[:]
-
-            yield Path(path), self.__dir_path(dirs), self.__file_path(files)
-
-        self.__depth = None
-
     def depth(self, depth=None):
-        if not isinstance(depth, int):
-            depth = None
-
-        self.__depth = depth
-
-        return self
+        return Walker(self).depth(depth)
 
     def follow_links(self, follow=False):
-        self.__follow_links = follow and True
-
-        return self
+        return Walker(self).follow_links(follow)
 
     def on_error(self, on_error=None):
-        self.__on_error = on_error
-
-        return self
+        return Walker(self).on_error(on_error)
 
     def set(self, path, file_name=None):
         if isinstance(path, Path):
@@ -161,9 +143,7 @@ class Path(object):
         return self
 
     def top_down(self, top_down=True):
-        self.__top_down = top_down and True
-
-        return self
+        return Walker(self).top_down(top_down)
 
     def up(self, count=1):
         path = self.__path[:]
@@ -240,6 +220,14 @@ class Path(object):
             self.__file = file_name
 
     @property
+    def file_extension(self):
+        return self.file_split[1]
+
+    @property
+    def file_split(self):
+        return os.path.splitext(self.file)
+
+    @property
     def full_path(self):
         return unicode(self)
 
@@ -250,3 +238,76 @@ class Path(object):
     @property
     def is_file(self):
         return os.path.isfile(unicode(self))
+
+    @property
+    def open(self):
+        if self.file is None:
+            raise IOError('The file property is not set.')
+
+        return File(self.full_path)
+
+
+class Walker(object):
+    def __init__(self, path=None):
+        self.__depth = None
+        self.__follow_links = False
+        self.__on_error = None
+        self.__top_down = True
+
+        self.__path = Path(path)
+
+    def __iter__(self):
+        return self.__walk()
+
+    @staticmethod
+    def __dir_path(dirs):
+        for d in dirs:
+            yield Path(d)
+
+    @staticmethod
+    def __file_path(files):
+        for f in files:
+            path = Path()
+            path.file = f
+            yield path
+
+    def __walk(self):
+        if not self.__path.exists:
+            raise StopIteration
+
+        walker = os.walk(unicode(self.__path),
+                         self.__top_down,
+                         self.__on_error,
+                         self.__follow_links)
+
+        for path, dirs, files in walker:
+            children = path.replace(unicode(self.__path), '').split(os.sep)
+
+            if self.__depth is not None and len(children) > self.__depth:
+                del dirs[:]
+
+            yield Path(path), self.__dir_path(dirs), self.__file_path(files)
+
+    def depth(self, depth=None):
+        if not isinstance(depth, int):
+            depth = None
+
+        self.__depth = depth
+
+        return self
+
+    def follow_links(self, follow=False):
+        self.__follow_links = follow and True
+
+        return self
+
+    def on_error(self, on_error=None):
+        self.__on_error = on_error
+
+        return self
+
+    def top_down(self, top_down=True):
+        self.__top_down = top_down and True
+
+        return self
+

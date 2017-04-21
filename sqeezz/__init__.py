@@ -28,7 +28,7 @@ class _Inject(FuncUtils):
 
         @classmethod
         def profile(cls, name=None):
-            if name is not None and isinstance(name, basestring):
+            if name is not None and isinstance(name, (str, unicode)):
                 cls.__current_profile = name
             else:
                 cls.__current_profile = None
@@ -55,18 +55,20 @@ class _Inject(FuncUtils):
             cls.__instance = cls.__Inject()
 
     @classmethod
-    def __getattr__(cls, name):
-        return getattr(cls.__instance, name)
-
-    @classmethod
     def __call__(cls, func, *args, **kwargs):
         return cls.__instance(func, args, kwargs)
+
+    @classmethod
+    def __getattr__(cls, name):
+        return getattr(cls.__instance, name)
 
 
 class Injected(object):
     """
     This is a placeholder for injected values.
     """
+    def __new__(cls, *args, **kwargs):
+        return cls
 
 
 class Sqeezz(object):
@@ -99,10 +101,6 @@ def _inject(func, *args, **kwargs):
     providers = inj.providers()
     mapped_args = inj.create_args_dict(func, args)
 
-    def set_profile_providers():
-        if inj.current_profile() in inj.p_providers():
-            providers.update(inj.p_providers()[inj.current_profile()])
-
     def inject_provider():
         kwargs.update(mapped_args)
 
@@ -110,10 +108,13 @@ def _inject(func, *args, **kwargs):
             if provider is Injected:
                 kwargs[arg_name] = providers[arg_name]
 
-    set_profile_providers()
-    inject_provider()
+    def set_profile_providers():
+        if inj.current_profile() in inj.p_providers():
+            providers.update(inj.p_providers()[inj.current_profile()])
 
+    set_profile_providers()
     inj.remove_invalid_kwargs(func, args, kwargs)
+    inject_provider()
 
     return func(**kwargs)
 
