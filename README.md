@@ -246,6 +246,30 @@ _If you register a dependency that is not in the default dependencies it will
 add to the default so that switching profiles will not cause the application to 
 fail because the dependency could not be injected._
 
+#### ModuleLoader ####
+The ModuleLoader allows you to load Python packages/modules and make them 
+available for injection in one command.
+```pythonstub
+>>> ModuleLoader.register('foo')
+```
+
+Now it can be injected.
+```pythonstub
+>>> @inject
+... def bar(foo=Injected):
+...     # code here
+```
+
+There is also a way to load a python file directly for injection.
+```pythonstub
+>>> ModuleLoader.register_new('/new/foo.py')
+```
+
+And again you will be able to inject the dependency.
+
+_Be careful to only register trusted code._
+
+
 ### Modifiers ###
 _**The `sqeezz_modifiers` package is optional.**_  
 There are a few modifiers that can be used to simplify tasks.
