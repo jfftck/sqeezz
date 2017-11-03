@@ -1,6 +1,6 @@
 # coding=utf-8
-from libs.decorator import decorate
-from utils import FuncUtils, ClassUtils
+from .libs.decorator import decorate
+from .utils import ClassUtils, FuncUtils, ImportUtils
 
 
 class _Inject(FuncUtils):
@@ -69,6 +69,21 @@ class Injected(object):
     """
     def __new__(cls, *args, **kwargs):
         return cls
+
+
+class ModuleLoader(object):
+    @classmethod
+    def register(cls, name, package=None):
+        cls._register(ImportUtils.import_module(name, package))
+
+    @classmethod
+    def register_new(cls, name, path):
+        cls._register(ImportUtils.load_module(name, path))
+
+    @staticmethod
+    def _register(mod):
+        if mod:
+            Sqeezz.register(**mod)
 
 
 class Sqeezz(object):

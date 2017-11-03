@@ -1,4 +1,5 @@
 # coding=utf-8
+from imp import load_source
 from importlib import import_module
 from inspect import getargspec, isclass
 from itertools import izip
@@ -69,7 +70,11 @@ class FuncUtils(object):
 class ImportUtils(object):
     @staticmethod
     def import_module(name, package=None):
-        return name, import_module(name, package)
+        return {name.split('.')[-1]: import_module(name, package)}
+
+    @staticmethod
+    def load_module(name, path):
+        return {name: load_source(name, path)}
 
 
 def is_callable(obj):
