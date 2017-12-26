@@ -71,14 +71,31 @@ class Injected(object):
         return cls
 
 
+class Imported(object):
+    def __init__(self, name, package=None):
+        self._name = name
+        self._package = package
+
+    def create(self):
+        return ImportUtils.import_module(self._name, self._package)
+
+
 class ModuleLoader(object):
     @classmethod
-    def register(cls, name, package=None):
-        cls._register(ImportUtils.import_module(name, package))
+    def register(cls, *names):
+        for name in names:
+            if hasattr(name, 'iteritems'):
+                for n, package in name.iteritems():
+                    cls._register(ImportUtils.import_module(n, package))
+            else:
+                cls._register(ImportUtils.import_module(name))
 
     @classmethod
-    def register_new(cls, name, path):
-        cls._register(ImportUtils.load_module(name, path))
+    def register_new(cls, *names, **packages):
+        for name in names:
+            cls._register(ImportUtils.load_module(name, name + '.py'))
+        for name, path in packages.iteritems():
+            cls._register(ImportUtils.load_module(name, path))
 
     @staticmethod
     def _register(mod):
@@ -120,8 +137,14 @@ def _inject(func, *args, **kwargs):
         kwargs.update(mapped_args)
 
         for arg_name, provider in kwargs.iteritems():
-            if provider is Injected:
-                kwargs[arg_name] = providers[arg_name]
+            try:
+                if provider is Injected:
+                    kwargs[arg_name] = providers[arg_name]
+                elif isinstance(provider, Imported):
+                    kwargs[arg_name] = provider.create().values()[0]
+            except TypeError:
+                # Could have a type error
+                pass
 
     def set_profile_providers():
         if inj.current_profile() in inj.p_providers():
