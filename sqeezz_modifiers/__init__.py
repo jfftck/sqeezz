@@ -41,6 +41,18 @@ class Call(FuncUtils):
 
     kwargs['arg3'] # <-- This will have your value.
     """
+    def __init__(self, callback, *args, **kwargs):
+        """
+        Store the callable and the default arguments and keyword arguments.
+
+        :param callback: callable
+        :param args: varargs
+        :param kwargs: keywords
+        """
+        self.__call = callback
+        self.args = args
+        self.kwargs = kwargs
+
     def __call__(self, *args, **kwargs):
         """
         Arguments supplied will replace the arguments given during
@@ -64,18 +76,6 @@ class Call(FuncUtils):
 
         return self.__call(**copy_kwargs)
 
-    def __init__(self, callback, *args, **kwargs):
-        """
-        Store the callable and the default arguments and keyword arguments.
-
-        :param callback: callable
-        :param args: varargs
-        :param kwargs: keywords
-        """
-        self.__call = callback
-        self.args = args
-        self.kwargs = kwargs
-
 
 class Data(object):
     """
@@ -87,6 +87,19 @@ class Data(object):
     2. On exit, this is called before closing the file-like object.
     3. On exception, this allows you to act on exceptions.
     """
+    def __init__(self, callback, *args, **kwargs):
+        """
+        Takes a callback and arguments to be used when called with the 'with'
+        statement.
+
+        :param callback: a callable
+        :param args: varargs
+        :param kwargs: keywords
+        """
+        self.__enter = Call(callback, args, kwargs)
+        self.__exit = None
+        self.__open_command = None
+
     def __enter__(self):
         """
         This will store and return the file-like object that the main
@@ -110,43 +123,13 @@ class Data(object):
         :param exc_tb: exception traceback
         :return: None
         """
-        execute_exit = True
-
-        if is_callable(self.__exception) and exc_type:
-            execute_exit = self.__exception((exc_type, exc_val, exc_tb),
-                                            self.__open_command)
-
-        if execute_exit and is_callable(self.__exit):
-            self.__exit(self.__open_command,
-                        *self.__exit.spec_args,
-                        **self.__exit.kwargs)
-
-        self.__open_command.close()
-
-    def __init__(self, callback, *args, **kwargs):
-        """
-        Takes a callback and arguments to be used when called with the 'with'
-        statement.
-
-        :param callback: a callable
-        :param args: varargs
-        :param kwargs: keywords
-        """
-        self.__enter = Call(callback, args, kwargs)
-        self.__exception = None
-        self.__exit = None
-        self.__open_command = None
-
-    def exception(self, callback):
-        """
-        Sets the exception callback.
-
-        :param callback: a callable
-        :return: self
-        """
-        self.__exception = Call(callback)
-
-        return self
+        try:
+            if is_callable(self.__exit):
+                self.__exit(self.__open_command,
+                            *self.__exit.spec_args,
+                            **self.__exit.kwargs)
+        finally:
+            self.__open_command.close()
 
     def exit(self, callback, *args, **kwargs):
         """

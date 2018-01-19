@@ -1,6 +1,6 @@
 # coding=utf-8
-from libs.decorator import decorate
-from utils import FuncUtils, ClassUtils
+from .libs.decorator import decorate
+from .utils import ClassUtils, FuncUtils, ImportUtils
 
 
 class _Inject(FuncUtils):
@@ -28,7 +28,7 @@ class _Inject(FuncUtils):
 
         @classmethod
         def profile(cls, name=None):
-            if name is not None and isinstance(name, basestring):
+            if name is not None and isinstance(name, (str, unicode)):
                 cls.__current_profile = name
             else:
                 cls.__current_profile = None
@@ -55,18 +55,52 @@ class _Inject(FuncUtils):
             cls.__instance = cls.__Inject()
 
     @classmethod
-    def __getattr__(cls, name):
-        return getattr(cls.__instance, name)
-
-    @classmethod
     def __call__(cls, func, *args, **kwargs):
         return cls.__instance(func, args, kwargs)
+
+    @classmethod
+    def __getattr__(cls, name):
+        return getattr(cls.__instance, name)
 
 
 class Injected(object):
     """
     This is a placeholder for injected values.
     """
+    def __new__(cls, *args, **kwargs):
+        return cls
+
+
+class Imported(object):
+    def __init__(self, name, package=None):
+        self._name = name
+        self._package = package
+
+    def create(self):
+        return ImportUtils.import_module(self._name, self._package)
+
+
+class ModuleLoader(object):
+    @classmethod
+    def register(cls, *names):
+        for name in names:
+            if hasattr(name, 'iteritems'):
+                for n, package in name.iteritems():
+                    cls._register(ImportUtils.import_module(n, package))
+            else:
+                cls._register(ImportUtils.import_module(name))
+
+    @classmethod
+    def register_new(cls, *names, **packages):
+        for name in names:
+            cls._register(ImportUtils.load_module(name, name + '.py'))
+        for name, path in packages.iteritems():
+            cls._register(ImportUtils.load_module(name, path))
+
+    @staticmethod
+    def _register(mod):
+        if mod:
+            Sqeezz.register(**mod)
 
 
 class Sqeezz(object):
@@ -99,21 +133,26 @@ def _inject(func, *args, **kwargs):
     providers = inj.providers()
     mapped_args = inj.create_args_dict(func, args)
 
-    def set_profile_providers():
-        if inj.current_profile() in inj.p_providers():
-            providers.update(inj.p_providers()[inj.current_profile()])
-
     def inject_provider():
         kwargs.update(mapped_args)
 
         for arg_name, provider in kwargs.iteritems():
-            if provider is Injected:
-                kwargs[arg_name] = providers[arg_name]
+            try:
+                if provider is Injected:
+                    kwargs[arg_name] = providers[arg_name]
+                elif isinstance(provider, Imported):
+                    kwargs[arg_name] = provider.create().values()[0]
+            except TypeError:
+                # Could have a type error
+                pass
+
+    def set_profile_providers():
+        if inj.current_profile() in inj.p_providers():
+            providers.update(inj.p_providers()[inj.current_profile()])
 
     set_profile_providers()
-    inject_provider()
-
     inj.remove_invalid_kwargs(func, args, kwargs)
+    inject_provider()
 
     return func(**kwargs)
 
